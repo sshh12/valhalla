@@ -19,7 +19,7 @@ class Glider:
         cmd = [
             "glider",
             "-listen",
-            "mixed://:" + str(ANDROID_PORT),
+            "mixed://:" + str(LISTEN_PORT),
             "-check",
             "www.google.com",
             "-checkinterval",
