@@ -46,7 +46,7 @@ def run_cmd(cmd):
 def get_adb_devices():
     devices = []
     out = run_cmd(["adb", "devices"])
-    for match in re.finditer(r"\n(\w+)\tdevice[\r\n]", out):
+    for match in re.finditer(r"(\w+)\tdevice[\r\n]", out):
         devices.append(match.group(1))
     return devices
 
