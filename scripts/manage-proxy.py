@@ -3,7 +3,7 @@ import time
 import re
 
 LISTEN_PORT = 4080
-BASE_PORT = 1080
+BASE_LOCAL_PORT = 1080
 ANDROID_PORT = 1080
 
 
@@ -26,7 +26,6 @@ class Glider:
             "300",
             "-strategy",
             "rr",
-            "-verbose",
         ]
         for port in forwards:
             cmd.extend(["-forward", "socks5://127.0.0.1:" + str(port)])
@@ -35,15 +34,19 @@ class Glider:
 
 
 def run_cmd(cmd):
-    out = str(subprocess.check_output(cmd), "ascii")
-    print("$ " + " ".join(cmd), "->", out)
+    print("$ " + " ".join(cmd))
+    try:
+        out = str(subprocess.check_output(cmd), "ascii")
+    except subprocess.CalledProcessError as e:
+        print("error", e)
+        out = ""
     return out
 
 
 def get_adb_devices():
     devices = []
     out = run_cmd(["adb", "devices"])
-    for match in re.finditer(r"\n(\w+)\t\w+[\r\n]", out):
+    for match in re.finditer(r"\n(\w+)\tdevice[\r\n]", out):
         devices.append(match.group(1))
     return devices
 
@@ -58,7 +61,7 @@ def update_adb_forwarding(port_map):
 def get_current_port_map():
     port_map = {}
     for device_id in get_adb_devices():
-        port = max([BASE_PORT] + list(port_map.values())) + 1
+        port = max([BASE_LOCAL_PORT] + list(port_map.values())) + 1
         port_map[device_id] = port
     return port_map
 
