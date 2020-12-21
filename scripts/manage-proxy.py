@@ -58,11 +58,14 @@ def update_adb_forwarding(port_map):
         run_cmd(["adb", "-s", device_id, "forward", "tcp:" + str(port), "tcp:" + str(ANDROID_PORT)])
 
 
-def get_current_port_map():
+def get_current_port_map(_port=[BASE_LOCAL_PORT]):
     port_map = {}
     for device_id in get_adb_devices():
-        port = max([BASE_LOCAL_PORT] + list(port_map.values())) + 1
+        port = _port[0]
         port_map[device_id] = port
+        _port[0] += 1
+        if _port[0] > BASE_LOCAL_PORT + 1000:
+            _port[0] = BASE_LOCAL_PORT
     return port_map
 
 
@@ -71,8 +74,8 @@ def main():
     port_map = None
     while True:
         new_port_map = get_current_port_map()
-        if new_port_map != port_map:
-            print("Updating...", new_port_map)
+        if port_map is None or new_port_map.keys() != port_map.keys():
+            print("Updating...", new_port_map, "(old ", port_map, ")")
             update_adb_forwarding(new_port_map)
             glider.update(list(new_port_map.values()))
         port_map = new_port_map
