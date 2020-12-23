@@ -2,7 +2,7 @@
 #include <WiFi.h>
 #include "valhalla.h"
 
-#define ADDR ADDR_HOME
+#define ADDR ADDR_ROUTER
 
 volatile char packetIdx = 0;
 volatile char packetReadIdx = 0;

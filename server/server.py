@@ -6,13 +6,16 @@ import threading
 import time
 
 from protocol import *
-from valhalla import PACKET_BME280DATA
+from valhalla import *
+
+DEVICE_PORT = 8111
+HTTP_PORT = 5000
 
 
 def on_packet(packet):
     print(packet)
-    if packet.type == PACKET_BME280DATA:
-        print(bme280data_t.parse(packet.data))
+    if packet.type == PACKET_ENVDATA:
+        print(envdata_t.parse(packet.data))
 
 
 def write_queue_to_conn(conn, data_q):
@@ -31,15 +34,18 @@ def listen_for_http(data_q):
 
     @app.route("/")
     def index():
-        data_q.put(packet_t.build(dict(from_=1, to=2, data=b"123456789012", type=1, empty=0, rssi=0)))
+        sw = switchdata_t.build(dict(onoff=1, toggle=1, swId=0))
+        data_q.put(
+            packet_t.build(dict(from_=ADDR_ROUTER, to=ADDR_HORSEBARN, data=sw, type=PACKET_SWITCHDATA, empty=0, rssi=0))
+        )
         return "!"
 
-    app.run("0.0.0.0", 5000, debug=False)
+    app.run("0.0.0.0", HTTP_PORT, debug=False)
 
 
 def listen_for_devices(data_q):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(("0.0.0.0", 8111))
+    sock.bind(("0.0.0.0", DEVICE_PORT))
     sock.listen(1)
 
     while True:

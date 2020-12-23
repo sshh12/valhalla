@@ -15,3 +15,9 @@ bme280data_t = cstruct.Struct(
     "pressure" / cstruct.Float32l,
     "hum" / cstruct.Float32l,
 )
+
+switchdata_t = cstruct.Struct(
+    "onoff" / cstruct.Int32sl,
+    "toggle" / cstruct.Int32sl,
+    "swId" / cstruct.Int32sl,
+)
