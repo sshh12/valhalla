@@ -1,82 +1,47 @@
 #include "heltec.h"
 #include <WiFi.h>
-
 #include "valhalla.h"
-#include "secrets.h"
 
 #define ADDR ADDR_HOME
 
-const char *ssid = "";
-const char *password = "";
-const char *host = "10.0.0.7";
-const int port = 8111;
-
-bool updated = false;
-bme280data_t catbarntemp;
+volatile char packetIdx = 0;
+volatile char packetReadIdx = 0;
+packet_t lastPacket;
+packet_t fwdPacket;
+size_t fwdCnt;
 
 void setup()
 {
   Heltec.begin(false, true, true, true, BAND);
-  LoRa.onReceive(onReceive);
-  LoRa.receive();
   Serial.println("Started");
-  WiFi.begin(ssid, password);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
-    Serial.print(".");
   }
+  Serial.print("WiFi Connected.");
 }
 
 void loop()
 {
-  if (!updated)
-  {
-    delay(1000);
-    return;
-  }
-  updated = false;
+  Serial.println(sizeof(packet_t));
   WiFiClient client;
-  if (!client.connect(host, port))
+  if (!client.connect(WIFI_HOST, WIFI_PORT))
   {
-    Serial.println("connection failed");
+    Serial.println("TCP conn failed...");
     return;
   }
-
-  String url = "/";
-  client.print("GET /?");
-  client.printf("temp=%f&pressure=%f&hum=%f", catbarntemp.temp, catbarntemp.pressure, catbarntemp.hum);
-  client.print(String(" HTTP/1.1\r\n") +
-               "Host: " + host + "\r\n" +
-               "Connection: close\r\n\r\n");
-  unsigned long timeout = millis();
-  while (client.available() == 0)
+  while (client.connected())
   {
-    if (millis() - timeout > 5000)
-    {
-      Serial.println(">>> Client Timeout !");
-      client.stop();
-      return;
+    loraDecode(LoRa.parsePacket(), &lastPacket);
+    if (lastPacket.type != PACKET_INVALID) {
+      Serial.println("recv");
+      client.write((byte*)&lastPacket, sizeof(packet_t));
     }
-  }
-  while (client.available())
-  {
-    client.readStringUntil('\r');
-  }
-}
-
-void onReceive(int packetSize)
-{
-  packet_t packet;
-  loraDecode(packetSize, &packet);
-  if (packet.to != ADDR || packet.type == PACKET_INVALID)
-  {
-    return;
-  }
-  if (packet.type == PACKET_BME280DATA)
-  {
-    catbarntemp = packet.data.bme280data;
-    Serial.printf("%.1fF %.1fhPa %.1f%%\n", catbarntemp.temp, catbarntemp.pressure, catbarntemp.hum);
-    updated = true;
+    fwdCnt = client.readBytes((byte*)&fwdPacket, sizeof(packet_t));
+    if(fwdCnt == sizeof(packet_t)) {
+      Serial.println("send");
+      loraSend(fwdPacket.from, fwdPacket.to, fwdPacket.type, fwdPacket.data.body, sizeof(fwdPacket.data.body));
+    }
   }
 }

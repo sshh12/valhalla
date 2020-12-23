@@ -1,5 +1,4 @@
-#define BAND 915E6
-#define TX_POWER 15
+#include "secrets.h"
 
 #define ADDR_BROADCAST 0x00
 #define ADDR_HOME 0x01
@@ -24,7 +23,7 @@ struct packet_t
   union
   {
     bme280data_t bme280data;
-    byte body[100];
+    byte body[12];
   } data;
 };
 

@@ -4,13 +4,11 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include "valhalla.h"
-#include "secrets.h"
 
 #define ADDR ADDR_CATBARN
-#define INTERVAL 1000 * 60
+#define INTERVAL 2000
 
 Adafruit_BME280 bme;
-char buf[100];
 long lastSendTime = 0;
 int interval = INTERVAL;
 
@@ -40,10 +38,11 @@ void loop()
     tempdata.temp = temp;
     tempdata.pressure = pressure;
     tempdata.hum = hum;
-    sendMessage(ADDR, ADDR_HOME, PACKET_BME280DATA, (byte *)&tempdata, sizeof(bme280data_t));
+    loraSend(ADDR, ADDR_HOME, PACKET_BME280DATA, (byte *)&tempdata, sizeof(bme280data_t));
     Serial.println("Sending...");
     lastSendTime = millis();
     interval = random(INTERVAL) + 1000;
     LoRa.receive();
   }
+  delay(1000);
 }

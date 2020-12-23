@@ -1,17 +1,74 @@
-from flask import Flask, request
+from flask import Flask
+import socket
+import sys
+import queue
+import threading
 import time
 
-app = Flask(__name__)
+from protocol import *
+from valhalla import PACKET_BME280DATA
 
 
-@app.route("/")
-def index():
-    temp = request.args["temp"]
-    hum = request.args["hum"]
-    with open("temp.csv", "a") as fp:
-        fp.write("{},{},{}\n".format(time.time(), temp, hum))
-    return ""
+def on_packet(packet):
+    print(packet)
+    if packet.type == PACKET_BME280DATA:
+        print(bme280data_t.parse(packet.data))
+
+
+def write_queue_to_conn(conn, data_q):
+    while True:
+        try:
+            packet_bytes = data_q.get()
+            conn.sendall(packet_bytes)
+            data_q.task_done()
+        except Exception as e:
+            print(e)
+            break
+
+
+def listen_for_http(data_q):
+    app = Flask(__name__)
+
+    @app.route("/")
+    def index():
+        data_q.put(packet_t.build(dict(from_=1, to=2, data=b"123456789012", type=1, empty=0, rssi=0)))
+        return "!"
+
+    app.run("0.0.0.0", 5000, debug=False)
+
+
+def listen_for_devices(data_q):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("0.0.0.0", 8111))
+    sock.listen(1)
+
+    while True:
+        conn, addr = sock.accept()
+        print(addr)
+        wt = threading.Thread(target=write_queue_to_conn, args=(conn, data_q))
+        wt.start()
+        try:
+            d = b""
+            while True:
+                data = conn.recv(4)
+                if not data:
+                    break
+                d += data
+                if len(d) >= packet_t_size:
+                    packet = packet_t.parse(d[:packet_t_size])
+                    d = d[packet_t_size:]
+                    on_packet(packet)
+        finally:
+            print("conn close")
+            conn.close()
+            wt.join()
 
 
 if __name__ == "__main__":
-    app.run("0.0.0.0", 8111, debug=False)
+    q = queue.Queue()
+    device_thread = threading.Thread(target=listen_for_devices, args=(q,))
+    device_thread.start()
+    http_thread = threading.Thread(target=listen_for_http, args=(q,))
+    http_thread.start()
+    device_thread.join()
+    http_thread.join()
