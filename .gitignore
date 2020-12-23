@@ -128,3 +128,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 glider.exe
+temp.csv
+secrets.h
+valhalla.cpp
+valhalla.h
+!arduino/valhalla.cpp
+!arduino/valhalla.h
