@@ -1,9 +1,14 @@
 #!/bin/sh
+# wget https://github.com/nadoo/glider/releases/download/v0.16.2/glider_0.16.2_linux_armv7.tar.gz
+# sudo apt-get upgrade iptables
 
 # clear tables
 sudo iptables -P INPUT ACCEPT
 sudo iptables -P FORWARD ACCEPT
 sudo iptables -P OUTPUT ACCEPT
+sudo iptables -F INPUT
+sudo iptables -F OUTPUT
+sudo iptables -F FORWARD
 sudo iptables -t nat -F
 sudo iptables -t mangle -F
 sudo iptables -F
@@ -29,7 +34,7 @@ sudo iptables -t nat -A REDSOCKS -p tcp -j REDIRECT --to-ports 12345
 sudo iptables -t nat -A OUTPUT -p tcp -j REDSOCKS
 sudo iptables -t nat -A PREROUTING -p tcp -m iprange --src-range 10.0.0.2-10.0.0.100 -j REDSOCKS
 
-# vpn redirect
+# # vpn redirect
 sudo iptables -t nat -A POSTROUTING -m iprange --src-range 10.0.0.102-10.0.0.200 -o tun0 -j MASQUERADE
 sudo iptables -A FORWARD -o tun0 -j ACCEPT
 sudo iptables -A FORWARD -i tun0 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
